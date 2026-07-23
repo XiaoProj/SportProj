@@ -1,0 +1,98 @@
+Basketball fatigue project dataset inventory
+====================================================
+Dataset root: E:\sportpro\dataset
+Scan mode: read-only metadata and filesystem traversal
+Top-level datasets: 4
+Total directories: 163
+Total files: 133318
+Total size: 68.40 GB
+
+Safety
+----------------------------------------------------
+No dataset files are modified by this script.
+Reports are written outside dataset/ only.
+
+Basketball mental fatigue / sleep restriction
+----------------------------------------------------
+Key: 5742821
+Path: dataset/5742821
+Purpose: Small spreadsheet plus one AW5 proprietary file related to basketball mental fatigue and sleep-deprivation experiments.
+Directories: 0
+Files: 2
+Size: 826.72 KB
+Tasks: subjective fatigue and sleep variables; shooting-performance and VAS score analysis; metadata source for fatigue-state labels after schema confirmation
+Split evidence: No train/test split found.
+Archive files: No compressed archives found.
+Notable files: Data.xlsx, Mental fatigue.AW5
+Warnings: AW5 is treated as an unknown proprietary format. Field names and parsing method must be confirmed before analysis.
+
+File extensions:
+  .aw5: 1 files, 812.00 KB
+  .xlsx: 1 files, 14.72 KB
+
+Human-M3 multi-person multi-view pose
+----------------------------------------------------
+Key: humanm3
+Path: dataset/humanm3
+Purpose: Multi-person, multi-view scenes including basketball with images, point clouds, camera calibration, 15-joint pose labels, and SMPL estimates.
+Directories: 102
+Files: 82439
+Size: 55.74 GB
+Tasks: 3D joint-angle feature engineering; pose adapter validation with explicit train/test directories; movement symmetry and stability feature prototyping
+Split evidence: Directory names indicate split structure: split1, split2, test, train; Explicit Human-M3 train/ and test/ directories are present.
+Archive files: No compressed archives found.
+Notable files: README.md
+Warnings: None.
+
+File extensions:
+  .jpeg: 30800 files, 14.89 GB
+  .json: 24438 files, 614.47 MB
+  .jpg: 15000 files, 10.23 GB
+  .pcd: 12200 files, 30.01 GB
+  .md: 1 files, 731 B
+
+EPFL SportCenter single-view / camera-pose
+----------------------------------------------------
+Key: sportcenter_camerapose_dataset
+Path: dataset/sportcenter_camerapose_dataset
+Purpose: Single-view basketball imagery with camera pose, player positions, ground grid, homography, and intrinsics.
+Directories: 56
+Files: 50834
+Size: 6.54 GB
+Tasks: single-view pose/camera-pose inspection; player-position and movement-quality feature prototyping; train/test sequence split benchmarking
+Split evidence: README declares training/testing split.
+Archive files: No compressed archives found.
+Notable files: README.txt, ground_grid.json, homography_rectified_template.json, intrinsics_seq_17xxxx.json, intrinsics_seq_98xx.json
+Warnings: None.
+
+File extensions:
+  .jpg: 50777 files, 6.47 GB
+  .json: 54 files, 70.72 MB
+  .png: 1 files, 1.66 MB
+  .py: 1 files, 1.75 KB
+  .txt: 1 files, 362 B
+
+EPFL SportCenter multi-view
+----------------------------------------------------
+Key: sportcenter_multiview_dataset
+Path: dataset/sportcenter_multiview_dataset
+Purpose: Eight synchronized calibrated basketball videos with trajectories, obstacle masks, and manually annotated 2D/3D human poses.
+Directories: 5
+Files: 43
+Size: 6.12 GB
+Tasks: multi-view pose and 3D kinematics; subject-level train/test split benchmarking; video-to-pose pipeline validation when frame extraction is approved
+Split evidence: README declares training/testing split.; README describes subject-level testing split: Sportcenter EPFL Multiview dataset. We filmed an amateur basketball match using 8 fixed synchronized and calibrated cameras. 2 of 8 cameras are mounted on the roof and provide a topview of the scene. The images feature a
+Archive files: No compressed archives found.
+Notable files: README.txt, calibration.json, trajectories.json
+Warnings: None.
+
+File extensions:
+  .json: 23 files, 191.91 MB
+  .mp4: 8 files, 5.93 GB
+  .png: 6 files, 22.38 KB
+  .py: 2 files, 8.15 KB
+  .ds_store: 1 files, 4.00 KB
+  .jpg: 1 files, 1.05 MB
+  .txt: 1 files, 970 B
+  [none]: 1 files, 6.00 KB
+

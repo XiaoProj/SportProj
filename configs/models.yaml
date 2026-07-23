@@ -1,0 +1,40 @@
+training:
+  random_seed: 42
+  test_size: 0.2
+  cross_validation_folds: 5
+  class_imbalance: balanced_class_weight_where_supported
+  route: A
+  default_pipeline: tabular_fatigue_sleep_performance_pipeline
+  allow_pose_fatigue_merge: false
+  allow_pose_based_fatigue_classifier: false
+  avoid_leakage:
+    - fit_imputer_on_train_only
+    - fit_scaler_on_train_only
+    - preserve_subject_or_sequence_split_when_available
+
+pipeline_policy:
+  pose_movement_quality_pipeline:
+    formal_model_training: false
+    allowed_modeling: descriptive_statistics_only
+    output_prefix: pose_movement_quality
+  tabular_fatigue_sleep_performance_pipeline:
+    formal_model_training: exploratory_only
+    labels: candidate_or_exploratory
+    output_prefix: tabular_fatigue_sleep_performance
+
+models:
+  - baseline_most_frequent
+  - logistic_regression
+  - random_forest
+  - svm_rbf
+  - gradient_boosting
+  - xgboost_optional
+  - lightgbm_optional
+
+metrics:
+  - auc
+  - accuracy
+  - precision
+  - recall
+  - f1
+  - confusion_matrix

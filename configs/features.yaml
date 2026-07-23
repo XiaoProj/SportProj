@@ -1,0 +1,94 @@
+feature_groups:
+  joint_angles:
+    - left_knee_flexion_angle
+    - right_knee_flexion_angle
+    - left_hip_flexion_angle
+    - right_hip_flexion_angle
+    - left_ankle_angle
+    - right_ankle_angle
+  symmetry:
+    - left_right_knee_angle_difference
+    - left_right_ankle_angle_difference
+  stability:
+    - left_knee_valgus_variation
+    - right_knee_valgus_variation
+    - landing_phase_left_knee_angle_fluctuation
+    - landing_phase_right_knee_angle_fluctuation
+  temporal:
+    - takeoff_to_landing_duration
+    - lowest_center_of_mass_timing
+  load_subjective:
+    - training_load_srpe_duration
+    - fatigue_score
+    - sleep_score
+    - muscle_soreness_score
+
+missing_values:
+  numeric_imputation: median_on_training_split_only
+  unavailable_feature_value: null
+
+processed_feature_table:
+  required_metadata_columns:
+    - dataset_name
+    - subject_id
+    - session_id
+    - split
+    - scene_name
+    - camera_id
+    - view_id
+    - frame_id
+    - trial_id
+    - task_type
+  optional_label_columns:
+    - before_after_label
+    - fatigue_label
+    - sleep_condition
+    - soreness_score
+    - sRPE
+    - training_duration
+  derived_feature_columns:
+    joint_angle_features: joint_angles
+    symmetry_features: symmetry
+    stability_features: stability
+    temporal_features: temporal
+    training_load_features:
+      - training_load_srpe_duration
+    subjective_fatigue_features:
+      - fatigue_score
+      - sleep_score
+      - muscle_soreness_score
+  leakage_controls:
+    - do_not_impute_using_test_split
+    - preserve_official_or_subject_level_splits
+    - compute aggregate features within trial/session boundaries only
+
+sample_feature_outputs:
+  humanm3_pose_features: outputs/processed/humanm3_pose_features_sample.csv
+  epfl_multiview_pose_features: outputs/processed/epfl_multiview_pose_features_sample.csv
+  fatigue_sleep_label_candidates: outputs/processed/fatigue_sleep_label_candidates.csv
+
+feature_availability_notes:
+  ankle_angle: requires distal foot or toe joint; current Human-M3 and EPFL multiview samples do not provide this joint
+  knee_valgus_proxy: computed as a geometric proxy from hip-knee-ankle coordinates, not a clinical valgus measurement
+  temporal_features: require event segmentation or frame-level trajectory windows
+
+route_A_feature_policy:
+  allow_pose_fatigue_merge: false
+  pose_movement_quality_features:
+    - joint_angles
+    - symmetry
+    - stability
+    - pose_completeness
+  tabular_fatigue_sleep_performance_features:
+    - condition_group
+    - vas_mf_mean
+    - vas_mot_mean
+    - shot_accuracy
+    - shot_accuracy_change_candidate
+    - questions_accuracy
+    - prontezza
+  exploratory_only_labels:
+    - condition_group_rule_candidate
+    - vas_mf_median_split_candidate
+    - vas_mf_tertile_candidate
+    - performance_decline_candidate

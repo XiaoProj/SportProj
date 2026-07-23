@@ -1,0 +1,45 @@
+{
+  "humanm3": {
+    "dataset": "humanm3",
+    "mode": "full",
+    "sampling_rule": "all basketball1/basketball2 train/test pose_calib JSON files",
+    "candidate_files": 9000,
+    "processed_pose_json": 9000,
+    "skipped_files": 0,
+    "feature_rows": 81021,
+    "subjects": 139,
+    "persons": 139,
+    "frames": 5000,
+    "output_path": "E:/sportpro/outputs/processed/pose_movement_quality_humanm3_features_full.csv",
+    "skipped": []
+  },
+  "epfl_multiview": {
+    "dataset": "epfl_multiview",
+    "mode": "full",
+    "sampling_rule": "all pose_subject*.json files under human_poses",
+    "candidate_files": 20,
+    "processed_pose_json": 20,
+    "skipped_files": 0,
+    "feature_rows": 700,
+    "subjects": 12,
+    "persons": 12,
+    "frames": 70,
+    "output_path": "E:/sportpro/outputs/processed/pose_movement_quality_epfl_multiview_features_full.csv",
+    "skipped": []
+  },
+  "epfl_single": {
+    "dataset": "epfl_single",
+    "processed_sequences": 28,
+    "top_level_metadata_files": "README.txt,example.py,ground_grid.json,homography_rectified_template.json,intrinsics_seq_17xxxx.json,intrinsics_seq_98xx.json,rectified_template.png",
+    "feature_rows": 28,
+    "output_path": "E:/sportpro/outputs/processed/pose_movement_quality_epfl_single_metadata_summary.csv",
+    "skipped": []
+  },
+  "result_paths": {
+    "combined": "E:/sportpro/outputs/processed/pose_movement_quality_features_analysis_table_full.csv",
+    "summary": "E:/sportpro/outputs/results/pose_movement_quality/pose_movement_quality_feature_summary_full.csv",
+    "missingness": "E:/sportpro/outputs/results/pose_movement_quality/pose_movement_quality_missingness_summary_full.csv",
+    "comparison": "E:/sportpro/outputs/results/pose_movement_quality/pose_movement_quality_dataset_comparison_full.csv",
+    "audit": "E:/sportpro/outputs/results/pose_movement_quality/pose_movement_quality_processing_audit_full.csv"
+  }
+}

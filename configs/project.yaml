@@ -1,0 +1,32 @@
+project:
+  name: basketball_fatigue_movement_quality
+  random_seed: 42
+  raw_dataset_root: dataset
+
+safety:
+  dataset_read_only: true
+  allowed_output_roots:
+    - outputs
+    - logs
+    - docs
+  prohibited_dataset_actions:
+    - modify
+    - delete
+    - move
+    - rename
+    - extract_inside_dataset
+    - cache_inside_dataset
+
+datasets:
+  epfl_single_view:
+    path: dataset/sportcenter_camerapose_dataset
+    adapter: src.data.adapters.epfl_single.EPFLSingleViewAdapter
+  epfl_multi_view:
+    path: dataset/sportcenter_multiview_dataset
+    adapter: src.data.adapters.epfl_multiview.EPFLMultiViewAdapter
+  humanm3:
+    path: dataset/humanm3
+    adapter: src.data.adapters.humanm3.HumanM3Adapter
+  fatigue_sleep_5742821:
+    path: dataset/5742821
+    adapter: src.data.adapters.fatigue_sleep.FatigueSleepAdapter

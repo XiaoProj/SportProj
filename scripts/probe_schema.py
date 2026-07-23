@@ -1,0 +1,323 @@
+"""Probe a few selected raw-data samples to document dataset schemas.
+
+This script reads only explicitly selected README, JSON, and XLSX samples. It
+does not extract frames, train models, convert data, or write into dataset/.
+"""
+
+from __future__ import annotations
+
+import importlib.util
+import json
+import sys
+from pathlib import Path
+from typing import Any
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from src.data.adapters import EPFLSingleViewAdapter, FatigueSleepAdapter, HumanM3Adapter
+from src.data.adapters.epfl_multiview import EPFLMultiViewAdapter
+from src.data.inventory import bytes_to_human, ensure_not_inside_dataset
+
+
+DATASET_ROOT = PROJECT_ROOT / "dataset"
+OUTPUT_JSON = PROJECT_ROOT / "outputs" / "metadata" / "schema_probe.json"
+LOG_PATH = PROJECT_ROOT / "logs" / "schema_probe.txt"
+SCHEMA_DOC_PATH = PROJECT_ROOT / "docs" / "schema_mapping.md"
+FEATURE_DOC_PATH = PROJECT_ROOT / "docs" / "feature_table_design.md"
+
+
+def dependency_status() -> dict[str, bool]:
+    """Report optional dependency availability without installing anything."""
+
+    return {
+        "openpyxl": importlib.util.find_spec("openpyxl") is not None,
+        "pandas": importlib.util.find_spec("pandas") is not None,
+        "shap": importlib.util.find_spec("shap") is not None,
+        "sklearn": importlib.util.find_spec("sklearn") is not None,
+    }
+
+
+def selected_adapters() -> dict[str, Any]:
+    """Return the four approved dataset adapters."""
+
+    return {
+        "sportcenter_camerapose_dataset": EPFLSingleViewAdapter(DATASET_ROOT / "sportcenter_camerapose_dataset"),
+        "sportcenter_multiview_dataset": EPFLMultiViewAdapter(DATASET_ROOT / "sportcenter_multiview_dataset"),
+        "humanm3": HumanM3Adapter(DATASET_ROOT / "humanm3"),
+        "5742821": FatigueSleepAdapter(DATASET_ROOT / "5742821"),
+    }
+
+
+def make_probe() -> dict[str, Any]:
+    """Run the small-sample probe."""
+
+    probe = {
+        "project_root": str(PROJECT_ROOT),
+        "dataset_root": str(DATASET_ROOT),
+        "mode": "small_sample_read_only_schema_probe",
+        "dependency_status": dependency_status(),
+        "datasets": {},
+    }
+    for key, adapter in selected_adapters().items():
+        probe["datasets"][key] = adapter.read_schema_sample(project_root=PROJECT_ROOT)
+    return probe
+
+
+def _sample_paths(dataset: dict[str, Any]) -> list[str]:
+    paths: list[str] = []
+    stack: list[Any] = list(dataset.get("samples", {}).values())
+    while stack:
+        value = stack.pop()
+        if isinstance(value, dict):
+            if "path" in value:
+                paths.append(str(value["path"]))
+            stack.extend(value.values())
+        elif isinstance(value, list):
+            stack.extend(value)
+    paths = [path for idx, path in enumerate(paths) if path and path not in paths[:idx]]
+    return paths
+
+
+def _top_keys_from_summary(sample: dict[str, Any]) -> str:
+    summary = sample.get("summary", {})
+    keys = summary.get("keys", [])
+    if not keys:
+        return ""
+    return ", ".join(str(key) for key in keys[:8])
+
+
+def write_log(probe: dict[str, Any]) -> None:
+    """Write a plain-text schema probe report."""
+
+    ensure_not_inside_dataset(LOG_PATH, DATASET_ROOT)
+    LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    lines: list[str] = [
+        "Basketball fatigue project schema probe",
+        "=" * 52,
+        f"Mode: {probe['mode']}",
+        f"Dataset root: {probe['dataset_root']}",
+        "Safety: selected small samples only; no dataset writes; no extraction; no training.",
+        "",
+        "Dependency status",
+        "-" * 52,
+    ]
+    for package, available in probe["dependency_status"].items():
+        lines.append(f"{package}: {'available' if available else 'missing'}")
+    lines.append("")
+
+    for key, dataset in probe["datasets"].items():
+        lines.extend([key, "-" * 52])
+        split_info = dataset.get("split_info", {})
+        lines.append(f"adapter_name: {dataset.get('dataset_name')}")
+        lines.append(f"split_type: {split_info.get('split_type')}")
+        lines.append(f"train: {split_info.get('train')}")
+        lines.append(f"test: {split_info.get('test')}")
+        lines.append(f"split_notes: {split_info.get('notes')}")
+        lines.append("sample_files:")
+        for path in _sample_paths(dataset):
+            lines.append(f"  - {path}")
+        lines.append("detected_schema:")
+        for field, note in dataset.get("detected_schema", {}).items():
+            lines.append(f"  - {field}: {note}")
+        lines.append("")
+
+    LOG_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def write_schema_doc(probe: dict[str, Any]) -> None:
+    """Write detailed schema mapping notes."""
+
+    ensure_not_inside_dataset(SCHEMA_DOC_PATH, DATASET_ROOT)
+    SCHEMA_DOC_PATH.parent.mkdir(parents=True, exist_ok=True)
+    lines: list[str] = [
+        "# Schema Mapping",
+        "",
+        "Generated by `scripts/probe_schema.py` from selected small samples only.",
+        "No files under `dataset/` are modified, extracted, converted, or cached.",
+        "",
+        "## Dependency Status",
+        "",
+        "| Package | Status | Purpose |",
+        "| --- | --- | --- |",
+    ]
+    purposes = {
+        "openpyxl": "Read `Data.xlsx` sheet names, headers, and preview rows.",
+        "pandas": "Not required in this stage; may be useful later for feature tables.",
+        "shap": "Not required in this stage; required later for SHAP analysis.",
+        "sklearn": "Not required in this stage; required later for model training.",
+    }
+    for package, available in probe["dependency_status"].items():
+        lines.append(f"| {package} | {'available' if available else 'missing'} | {purposes[package]} |")
+
+    lines.extend(
+        [
+            "",
+            "## Dataset-Level Field Mapping",
+            "",
+            "| Dataset | Sample Files Read | Train/Test Split | Pose/Kinematic Fields | Fatigue/Sleep/Before-After Fields | Missing or TODO |",
+            "| --- | --- | --- | --- | --- | --- |",
+        ]
+    )
+    for key, dataset in probe["datasets"].items():
+        detected = dataset.get("detected_schema", {})
+        split_info = dataset.get("split_info", {})
+        sample_files = "<br>".join(f"`{path}`" for path in _sample_paths(dataset)[:8]) or "none"
+        split = f"type={split_info.get('split_type')}; test={split_info.get('test')}"
+        pose_keys = [
+            field
+            for field in detected
+            if any(token in field for token in ("pose", "joint", "camera", "view", "player", "court", "frame", "trajectory"))
+        ]
+        fatigue_keys = [
+            field
+            for field in detected
+            if any(token in field for token in ("fatigue", "sleep", "soreness", "before_after", "performance"))
+        ]
+        todo = [field for field, note in detected.items() if "TODO" in str(note)]
+        lines.append(
+            f"| {key} | {sample_files} | {split} | {', '.join(pose_keys) or 'none observed'} | "
+            f"{', '.join(fatigue_keys) or 'none observed'} | {', '.join(todo) or 'none'} |"
+        )
+
+    lines.extend(["", "## Detailed Samples", ""])
+    for key, dataset in probe["datasets"].items():
+        lines.extend([f"### {key}", ""])
+        lines.append("Detected schema notes:")
+        for field, note in dataset.get("detected_schema", {}).items():
+            lines.append(f"- `{field}`: {note}")
+        lines.append("")
+        lines.append("Selected sample structures:")
+        for label, sample in dataset.get("samples", {}).items():
+            if isinstance(sample, dict) and "summary" in sample:
+                size = bytes_to_human(int(sample.get("size_bytes", 0)))
+                keys = _top_keys_from_summary(sample)
+                lines.append(f"- `{label}`: {sample.get('path')} ({size}); top keys: {keys or 'not applicable'}")
+            elif isinstance(sample, list):
+                lines.append(f"- `{label}`:")
+                for item in sample:
+                    size = bytes_to_human(int(item.get("size_bytes", 0)))
+                    keys = _top_keys_from_summary(item)
+                    item_path = item.get("path") or item.get("name") or "unknown"
+                    lines.append(f"  - {item_path} ({size}); top keys: {keys or 'not applicable'}")
+            elif isinstance(sample, dict) and "sheets" in sample:
+                lines.append(f"- `{label}`: {sample.get('path')}")
+                for sheet in sample["sheets"]:
+                    header_rows = sheet.get("preview_rows", [])[:2]
+                    lines.append(
+                        f"  - sheet `{sheet['name']}`: rows={sheet['max_row']}, columns={sheet['max_column']}, "
+                        f"first_rows={header_rows}"
+                    )
+            elif isinstance(sample, dict):
+                lines.append(f"- `{label}`: {sample}")
+        lines.append("")
+
+    lines.extend(
+        [
+            "## Label Availability",
+            "",
+            "- EPFL single-view, EPFL multi-view, and Human-M3 samples do not expose fatigue labels or before/after labels.",
+            "- `5742821/Data.xlsx` exposes mental fatigue and mental fatigue plus sleep-deprivation condition groups, VAS fields, and shooting accuracy fields.",
+            "- No explicit binary `fatigue_label` or `before_after_label` column was observed in the spreadsheet preview.",
+            "- `.AW5` remains an unknown proprietary format and is not parsed.",
+            "",
+        ]
+    )
+    SCHEMA_DOC_PATH.write_text("\n".join(lines), encoding="utf-8")
+
+
+def write_feature_table_doc(probe: dict[str, Any]) -> None:
+    """Write the future processed feature table design."""
+
+    _ = probe
+    ensure_not_inside_dataset(FEATURE_DOC_PATH, DATASET_ROOT)
+    FEATURE_DOC_PATH.parent.mkdir(parents=True, exist_ok=True)
+    lines = [
+        "# Processed Feature Table Design",
+        "",
+        "This document defines the future standard feature table. The table is not generated in this stage.",
+        "Derived data should later be written under `outputs/processed/` only after approval.",
+        "",
+        "## Required Metadata Columns",
+        "",
+        "| Column | Meaning | Notes |",
+        "| --- | --- | --- |",
+        "| `dataset_name` | Source dataset identifier | Required for all rows |",
+        "| `subject_id` | Athlete/person identifier | Use dataset subject/person IDs when present; otherwise null |",
+        "| `session_id` | Session or sequence identifier | EPFL sequence, Human-M3 scene/split, or spreadsheet condition |",
+        "| `split` | train/test/validation | Use official split when available |",
+        "| `scene_name` | Scene or task setting | Human-M3 basketball1/basketball2, EPFL SportCenter, etc. |",
+        "| `camera_id` | Camera identifier | EPFL `ace_N` or Human-M3 `camera_N`; null for non-video spreadsheet rows |",
+        "| `view_id` | View identifier | Same as camera when no separate view concept exists |",
+        "| `frame_id` | Frame index or image filename | Use raw frame/image ID without copying image data |",
+        "| `trial_id` | Trial or jump/shot ID | Null until event segmentation is available |",
+        "| `task_type` | Movement or experimental task | jump, landing, shot, unknown, etc. |",
+        "",
+        "## Optional Label and Context Columns",
+        "",
+        "| Column | Meaning | Current Availability |",
+        "| --- | --- | --- |",
+        "| `before_after_label` | before/after training label | Not observed in probed samples |",
+        "| `fatigue_label` | binary or multiclass fatigue state | Not explicitly observed; may be derived later only with validated rules |",
+        "| `sleep_condition` | sleep restriction or sleep quality condition | Condition group observed in `Data.xlsx` |",
+        "| `soreness_score` | muscle soreness score | Not observed in current samples |",
+        "| `sRPE` | session rating of perceived exertion | Not observed in current samples |",
+        "| `training_duration` | training/session duration | Not observed in current samples |",
+        "",
+        "## Derived Feature Columns",
+        "",
+        "- joint angle features: knee flexion, hip flexion, ankle angle",
+        "- symmetry features: left-right knee angle difference, left-right ankle angle difference",
+        "- stability features: knee valgus proxy variation, landing-phase knee angle fluctuation",
+        "- temporal features: takeoff-to-landing duration, lowest center-of-mass timing",
+        "- training load features: `training_load_srpe_duration = sRPE * training_duration` when both inputs exist",
+        "- subjective fatigue features: fatigue score, sleep score, muscle soreness score when validated fields exist",
+        "",
+        "## Dataset Mapping",
+        "",
+        "| Dataset | Useful Metadata | Pose Features | Fatigue/Performance Labels | Gaps |",
+        "| --- | --- | --- | --- | --- |",
+        "| EPFL single-view | sequence, frame filename, camera pose, player positions | limited unless pose keypoints are confirmed; player positions support movement summaries | none observed | no fatigue, no before/after, no subject fatigue metadata |",
+        "| EPFL multi-view | subject, camera `ace_N`, frame index, trajectories | 2D and 3D pose from `pose_subject*.json` | none observed | no fatigue, no before/after |",
+        "| Human-M3 | split, scene, camera, person ID, frame-like JSON file | 15-joint 3D pose from `pose_calib` | none observed | no fatigue, no before/after, no training-load metadata |",
+        "| 5742821 | subject, condition group, shot accuracy, VAS fields | none observed | mental fatigue/sleep-deprivation condition groups and performance fields | no direct pose, no explicit binary fatigue label, `.AW5` unknown |",
+        "",
+        "## Leakage Controls",
+        "",
+        "- Fit imputers and scalers on training splits only.",
+        "- Preserve official sequence, subject, or directory splits when available.",
+        "- Do not derive trial-level labels using test-set outcomes.",
+        "- Keep raw file paths as references only; do not copy raw data into processed outputs.",
+        "",
+    ]
+    FEATURE_DOC_PATH.write_text("\n".join(lines), encoding="utf-8")
+
+
+def write_outputs(probe: dict[str, Any]) -> None:
+    """Write all approved probe outputs."""
+
+    for path in (OUTPUT_JSON, LOG_PATH, SCHEMA_DOC_PATH, FEATURE_DOC_PATH):
+        ensure_not_inside_dataset(path, DATASET_ROOT)
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+    OUTPUT_JSON.write_text(json.dumps(probe, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    write_log(probe)
+    write_schema_doc(probe)
+    write_feature_table_doc(probe)
+
+
+def main() -> int:
+    probe = make_probe()
+    write_outputs(probe)
+    print("Schema probe complete.")
+    print(f"Wrote: {OUTPUT_JSON}")
+    print(f"Wrote: {LOG_PATH}")
+    print(f"Wrote: {SCHEMA_DOC_PATH}")
+    print(f"Wrote: {FEATURE_DOC_PATH}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,51 @@
+route: A
+
+safety:
+  allow_pose_fatigue_merge: false
+  allow_pose_based_fatigue_classifier: false
+  allow_cross_dataset_subject_id_merge_without_evidence: false
+  dataset_read_only: true
+
+pipelines:
+  pose_movement_quality_pipeline:
+    datasets:
+      - humanm3
+      - epfl_sportcenter_single_view
+      - epfl_sportcenter_multiview
+    outputs_prefix: pose_movement_quality
+    allowed_tasks:
+      - pose_feature_engineering
+      - movement_quality_descriptive_statistics
+      - missingness_analysis
+      - symmetry_analysis
+      - knee_hip_angle_analysis
+      - knee_valgus_proxy_analysis
+    prohibited_tasks:
+      - fatigue_classification
+      - sleep_label_modeling
+      - merge_with_5742821
+
+  tabular_fatigue_sleep_performance_pipeline:
+    datasets:
+      - zenodo_5742821
+    outputs_prefix: tabular_fatigue_sleep_performance
+    zenodo_record: https://zenodo.org/records/5742821
+    title: Single and combined effect of acute sleep restriction and mental fatigue on basketball free-throw performance
+    conditions:
+      - control
+      - mental_fatigue
+      - sleep_restriction
+      - sleep_restriction_plus_mental_fatigue
+    allowed_tasks:
+      - condition_group_comparison
+      - vas_mf_subjective_score_analysis
+      - vas_mot_motivation_analysis
+      - shot_accuracy_change_candidate
+      - exploratory_tabular_ml
+      - exploratory_feature_importance
+      - exploratory_shap
+    label_policy:
+      ground_truth_fatigue_label_available: false
+      before_after_label_available: false
+      vas_thresholds_are_exploratory: true
+      performance_change_is_candidate: true
