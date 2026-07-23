@@ -1,0 +1,5 @@
+Sportcenter EPFL Multiview dataset.
+
+We filmed an amateur basketball match using 8 fixed synchronized and calibrated cameras. 2 of 8 cameras are mounted on the roof  and provide a topview of the scene. The images feature a variable number of subjects ranging from 10 to 13 that are either running, walking, or standing still. The players are often occluded either by others or by various objects, such as the metal frames of the nets. There are also substantial light variations that makes it even more challenging. We computed the players' trajectories for the whole sequence and manually annotated a subset with 2D poses. Thereafter, we obtained the 3D poses by triangulating the manually annotated 2D detections. The dataset comprises 536,000 images for which 560 are provided with 2D and 3D poses. For testing we use two subjects ('7' and '12') and the rest for training.
+
+To extract the frames: ffmpeg -i multicam/ace_0.mp4 -qscale:v 2 multicam/ace_0/frame_%06d.jpg
